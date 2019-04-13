@@ -1,0 +1,10 @@
+Resources:
+   myservice:
+       Type: AWS::Serverless::Function
+       Properties:
+           CodeUri: build\libs\my-service.jar
+           Handler: com.serverless.Handler
+           Runtime: java8
+           Environment:
+               Variables:
+                   AWS_REGION: sa-east-1
