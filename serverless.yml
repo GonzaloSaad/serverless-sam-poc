@@ -55,7 +55,7 @@ package:
 functions:
   hello:
     name: ${self:provider.stage}-${self:service} # optional, Deployed Lambda name
-    handler: com.serverless.Handler
+    handler: com.serverless.handler.Handler
     environment:
       STAGE: ${self:provider.stage}
 
