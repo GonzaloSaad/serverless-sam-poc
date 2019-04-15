@@ -21,6 +21,8 @@ service: my-service # NOTE: update this with your service name
 provider:
   name: aws
   runtime: java8
+  profile: serverless
+  stage: ${opt:stage, 'dev'} # Set the default stage used. Default is dev
 
 # you can overwrite defaults here
 #  stage: dev
@@ -52,7 +54,10 @@ package:
 
 functions:
   hello:
+    name: ${self:provider.stage}-${self:service} # optional, Deployed Lambda name
     handler: com.serverless.Handler
+    environment:
+      STAGE: ${self:provider.stage}
 
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events

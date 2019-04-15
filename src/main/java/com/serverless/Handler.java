@@ -14,7 +14,9 @@ public class Handler implements RequestHandler<Map<String, Object>, ApiGatewayRe
 
 	@Override
 	public ApiGatewayResponse handleRequest(Map<String, Object> input, Context context) {
-		LOG.info("received: " + input);
+		LOG.info("ENV: " + System.getenv("STAGE"));
+		LOG.info("ENV: " + System.getenv("AWS_REGION"));
+		LOG.info("received with update: " + input);
 		Response responseBody = new Response("Go Serverless v1.x! Your function executed successfully!", input);
 		return ApiGatewayResponse.builder()
 				.setStatusCode(200)
