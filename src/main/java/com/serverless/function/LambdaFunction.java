@@ -9,6 +9,8 @@ public class LambdaFunction implements Function<String, Response> {
     @Override
     public Response apply(String s) {
         // TODO: Implement transformation.
+
+        // soy Guido
         return null;
     }
 }
