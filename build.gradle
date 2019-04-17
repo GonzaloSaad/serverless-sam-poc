@@ -16,6 +16,10 @@ dependencies {
         'com.fasterxml.jackson.core:jackson-databind:2.8.5',
         'com.fasterxml.jackson.core:jackson-annotations:2.8.5'
     )
+    compile group: 'com.amazonaws', name: 'aws-java-sdk-dynamodb', version: '1.11.534'
+    compile group: 'javax.persistence', name: 'persistence-api', version: '1.0.2'
+
+
 }
 
 jar {
