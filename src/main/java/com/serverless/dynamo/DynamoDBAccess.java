@@ -1,5 +1,8 @@
 package com.serverless.dynamo;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
@@ -40,7 +43,13 @@ public class DynamoDBAccess {
         return AmazonDynamoDBClientBuilder
                 .standard()
                 .withEndpointConfiguration(getEndpointConfiguration())
+                .withCredentials(getCredentials())
                 .build();
+    }
+
+    private AWSCredentialsProvider getCredentials() {
+        return new AWSStaticCredentialsProvider(
+                new BasicAWSCredentials("test", "test"));
     }
 
     private AwsClientBuilder.EndpointConfiguration getEndpointConfiguration() {

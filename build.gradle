@@ -1,23 +1,37 @@
 apply plugin: 'java'
+apply plugin: 'docker-compose'
 
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath "com.avast.gradle:gradle-docker-compose-plugin:0.8.13"
+    }
+}
 
 repositories {
     mavenCentral()
 }
 
+def DYNAMO_PUBLIC_PORT = 37777
+def DEBUG_PORT = 37888
+def SERVICE_NAME = "myservice"
+def EVENT_PATH = "event.json"
+
+
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compile (
-        'com.amazonaws:aws-lambda-java-core:1.1.0',
-        'com.amazonaws:aws-lambda-java-log4j:1.0.0',
-        'com.fasterxml.jackson.core:jackson-core:2.8.5',
-        'com.fasterxml.jackson.core:jackson-databind:2.8.5',
-        'com.fasterxml.jackson.core:jackson-annotations:2.8.5'
+    compile(
+            'com.amazonaws:aws-lambda-java-core:1.1.0',
+            'com.amazonaws:aws-lambda-java-log4j:1.0.0',
+            'com.fasterxml.jackson.core:jackson-core:2.8.5',
+            'com.fasterxml.jackson.core:jackson-databind:2.8.5',
+            'com.fasterxml.jackson.core:jackson-annotations:2.8.5'
     )
     compile group: 'com.amazonaws', name: 'aws-java-sdk-dynamodb', version: '1.11.534'
-    compile group: 'javax.persistence', name: 'persistence-api', version: '1.0.2'
 
 
 }
@@ -33,16 +47,7 @@ jar {
     }
 }
 
-// Task for building the zip file for upload
 task buildZip(type: Zip) {
-    // Using the Zip API from gradle to build a zip file of all the dependencies
-    //
-    // The path to this zip file can be set in the serverless.yml file for the
-    // package/artifact setting for deployment to the S3 bucket
-    //
-    // Link: https://docs.gradle.org/current/dsl/org.gradle.api.tasks.bundling.Zip.html
-
-    // set the base name of the zip file
     baseName = "hello"
     from compileJava
     from processResources
@@ -51,8 +56,71 @@ task buildZip(type: Zip) {
     }
 }
 
+task copyClassesToLocalRunFolder(type: Copy){
+    from(sourceSets.main.output) {
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+    }
+    into buildDir.path + "/run"
+}
+
+task copyDependenciesToLocalRunFolder(type: Copy){
+    from(configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }) {
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+    }
+    into buildDir.path + "/run"
+}
+
+task runLocalLambda {
+    doLast{
+        def commandTemplate = "sam local invoke -d %s %s -e %s"
+        def command = String.format(commandTemplate, DEBUG_PORT, SERVICE_NAME, EVENT_PATH)
+        println command
+        println "Waiting on port: " + DEBUG_PORT
+        command.execute().text
+    }
+
+}
+
+dockerCompose {
+
+    useComposeFiles = ["./docker-compose.yml"]
+    startedServices = ['localstack']
+    forceRecreate = false
+    buildBeforeUp = true
+    buildBeforePull = true
+    ignorePushFailure = false
+    buildAdditionalArgs = ['--force-rm']
+
+    //logging
+    captureContainersOutput = false
+    captureContainersOutputToFile = "${buildDir.path}/logs/all_container_logs.txt"
+    //separate logs for all the containers
+    containerLogToDir = project.file("${buildDir.path}/logs")
+    captureContainersOutputToFiles = "${buildDir.path}/logs/separated"
+
+    waitForTcpPorts = true
+
+    removeContainers = true
+    removeImages = "local"
+    removeVolumes = true
+    removeOrphans = true
+    environment.put 'DYNAMO_PUBLIC_PORT', DYNAMO_PUBLIC_PORT
+}
+
 build.dependsOn buildZip
 
-task wrapper(type: Wrapper) {
-    gradleVersion = '3.5'
-}
+runLocalLambda.dependsOn build
+runLocalLambda.dependsOn copyDependenciesToLocalRunFolder
+runLocalLambda.dependsOn copyClassesToLocalRunFolder
+runLocalLambda.dependsOn composeUp
+copyDependenciesToLocalRunFolder.mustRunAfter build
+copyClassesToLocalRunFolder.mustRunAfter build
+
+
+
+
+

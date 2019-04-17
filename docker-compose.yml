@@ -1,0 +1,25 @@
+version: '3.7'
+
+# This compose file is used for implementing the interface definition for the jenkins pipeline it uses.
+# PLEASE REFER TO THE LINK BELOW before requesting further info on changes or functionality
+# https://confluence-tools.swacorp.com/display/CREW/Generalized+Build+Pipeline
+
+services:
+
+  localstack:
+    image: localstack/localstack
+    hostname: localstack
+    container_name: localstack-myservice
+    ports:
+      - ${DYNAMO_PUBLIC_PORT}:4569
+      - 0:8080
+    environment:
+      SERVICES: dynamodb
+      HOSTNAME: localstack
+      DEFAULT_REGION: sa-east-1
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+    healthcheck:
+      test: curl --fail -s http://localstack:8080 || exit 1
+      interval: 1s
+      retries: 15
