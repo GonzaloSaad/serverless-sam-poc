@@ -1,3 +1,8 @@
+import java.util.concurrent.Callable
+import java.util.concurrent.Executor
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+
 apply plugin: 'java'
 apply plugin: 'docker-compose'
 
@@ -56,7 +61,7 @@ task buildZip(type: Zip) {
     }
 }
 
-task copyClassesToLocalRunFolder(type: Copy){
+task copyClassesToLocalRunFolder(type: Copy) {
     from(sourceSets.main.output) {
         exclude "META-INF/*.SF"
         exclude "META-INF/*.DSA"
@@ -65,7 +70,7 @@ task copyClassesToLocalRunFolder(type: Copy){
     into buildDir.path + "/run"
 }
 
-task copyDependenciesToLocalRunFolder(type: Copy){
+task copyDependenciesToLocalRunFolder(type: Copy) {
     from(configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }) {
         exclude "META-INF/*.SF"
         exclude "META-INF/*.DSA"
@@ -74,16 +79,24 @@ task copyDependenciesToLocalRunFolder(type: Copy){
     into buildDir.path + "/run"
 }
 
-task runLocalLambda {
-    doLast{
-        def commandTemplate = "sam local invoke -d %s %s -e %s"
-        def command = String.format(commandTemplate, DEBUG_PORT, SERVICE_NAME, EVENT_PATH)
-        println command
-        println "Waiting on port: " + DEBUG_PORT
-        command.execute().text
-    }
 
+task runLocalLambda() {
+
+    doLast{
+
+        def portForLambda = getAvailablePort()
+
+        Executor executor = Executors.newSingleThreadExecutor()
+
+        def commandTemplate = "sam local invoke -d %s %s -e %s"
+        def command = String.format(commandTemplate, portForLambda, SERVICE_NAME, EVENT_PATH)
+        println command
+
+        executor.submit({command.execute().text} as Callable<Void>)
+        println "Waiting on port: " + portForLambda
+    }
 }
+
 
 dockerCompose {
 
@@ -108,19 +121,19 @@ dockerCompose {
     removeImages = "local"
     removeVolumes = true
     removeOrphans = true
-    environment.put 'DYNAMO_PUBLIC_PORT', DYNAMO_PUBLIC_PORT
+    environment.put 'DYNAMO_PUBLIC_PORT', "${DYNAMO_PUBLIC_PORT}"
+}
+
+static def getAvailablePort() {
+    ServerSocket s = new ServerSocket(0)
+    return s.getLocalPort()
 }
 
 build.dependsOn buildZip
-
 runLocalLambda.dependsOn build
 runLocalLambda.dependsOn copyDependenciesToLocalRunFolder
 runLocalLambda.dependsOn copyClassesToLocalRunFolder
 runLocalLambda.dependsOn composeUp
 copyDependenciesToLocalRunFolder.mustRunAfter build
+
 copyClassesToLocalRunFolder.mustRunAfter build
-
-
-
-
-
