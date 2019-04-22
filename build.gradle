@@ -1,6 +1,5 @@
 import java.util.concurrent.Callable
 import java.util.concurrent.Executor
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 apply plugin: 'java'
@@ -19,10 +18,10 @@ repositories {
     mavenCentral()
 }
 
-def DYNAMO_PUBLIC_PORT = 37777
-def DEBUG_PORT = 37888
 def SERVICE_NAME = "myservice"
 def EVENT_PATH = "event.json"
+def LOCAL_STACK_CONTAINER_NAME = "ls-myservice"
+def NETWORK_NAME = "serverless"
 
 
 sourceCompatibility = 1.8
@@ -53,7 +52,6 @@ jar {
 }
 
 task buildZip(type: Zip) {
-    baseName = "hello"
     from compileJava
     from processResources
     into('lib') {
@@ -88,7 +86,7 @@ task runLocalLambda() {
 
         Executor executor = Executors.newSingleThreadExecutor()
 
-        def commandTemplate = "sam local invoke -d %s %s -e %s"
+        def commandTemplate = "sam local invoke -d %s %s -e %s --docker-network host"
         def command = String.format(commandTemplate, portForLambda, SERVICE_NAME, EVENT_PATH)
         println command
 
@@ -121,12 +119,17 @@ dockerCompose {
     removeImages = "local"
     removeVolumes = true
     removeOrphans = true
-    environment.put 'DYNAMO_PUBLIC_PORT', "${DYNAMO_PUBLIC_PORT}"
+    environment.put 'LOCAL_STACK_CONTAINER_NAME', "${LOCAL_STACK_CONTAINER_NAME}"
+    environment.put 'NETWORK_NAME', "${NETWORK_NAME}"
 }
 
-static def getAvailablePort() {
-    ServerSocket s = new ServerSocket(0)
-    return s.getLocalPort()
+def static getAvailablePort() {
+    if (System.properties['os.name'].toLowerCase().contains('windows')) {
+        ServerSocket s = new ServerSocket(0)
+        return s.getLocalPort()
+    } else {
+        return 37777
+    }
 }
 
 build.dependsOn buildZip

@@ -1,4 +1,4 @@
-version: '3.7'
+version: '3.3'
 
 # This compose file is used for implementing the interface definition for the jenkins pipeline it uses.
 # PLEASE REFER TO THE LINK BELOW before requesting further info on changes or functionality
@@ -9,9 +9,9 @@ services:
   localstack:
     image: localstack/localstack
     hostname: localstack
-    container_name: localstack-myservice
+    container_name: ${LOCAL_STACK_CONTAINER_NAME}
     ports:
-      - ${DYNAMO_PUBLIC_PORT}:4569
+      - 0:4569
       - 0:8080
     environment:
       SERVICES: dynamodb
@@ -23,3 +23,10 @@ services:
       test: curl --fail -s http://localstack:8080 || exit 1
       interval: 1s
       retries: 15
+    networks:
+      - serverless
+
+networks:
+  serverless:
+    external:
+      name: host
